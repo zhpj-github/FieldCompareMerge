@@ -79,5 +79,20 @@ namespace FieldCompareMerge
                 return dt;
             }
         }
+        public bool SaveTableToDB(DataTable table,string tableName,string keyName,string filedName) {
+            using (Conn) {
+                OleDbCommand commd = new OleDbCommand();
+                commd.Connection = Conn;
+                string sql = "update {0} set {1}=? where {2}=?";
+                commd.CommandText = string.Format(sql, tableName, filedName, keyName);
+                foreach (DataRow row in table.Rows) {
+                    commd.Parameters.Clear();
+                    commd.Parameters.AddWithValue("@filedValue", row[filedName]);
+                    commd.Parameters.AddWithValue("@keyValue", row[keyName]);
+                    commd.ExecuteNonQuery();
+                }
+                return true;
+            }
+        }
     }
 }

@@ -46,6 +46,7 @@
             // 
             // btnSelected
             // 
+            this.btnSelected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnSelected.Location = new System.Drawing.Point(13, 226);
             this.btnSelected.Name = "btnSelected";
             this.btnSelected.Size = new System.Drawing.Size(75, 23);
@@ -62,6 +63,7 @@
             this.Controls.Add(this.btnSelected);
             this.Controls.Add(this.dataGridView1);
             this.Name = "SelectTable";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "SelectTable";
             this.Load += new System.EventHandler(this.SelectTable_Load);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
