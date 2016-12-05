@@ -53,6 +53,16 @@ namespace FieldCompareMerge
 
         public DbHelper() { }
 
+        public bool OpenConn() {
+            try {
+                OleDbConnection conn = new OleDbConnection(ConnectionString);
+                conn.Open();
+            } catch {
+                return false;
+            }
+            return true;
+        }
+
         public DataTable LoadTables() {
             using (Conn) {
                 string[] restrictionValues = { null, null, null, "Table" };

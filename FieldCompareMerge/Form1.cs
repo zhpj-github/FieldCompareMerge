@@ -20,18 +20,6 @@ namespace FieldCompareMerge
         }
 
         private void btnSelectTable_Click(object sender, EventArgs e) {
-            if (string.IsNullOrWhiteSpace(txtDataBaseAddress.Text)
-                || string.IsNullOrWhiteSpace(txtDatabase.Text)
-                || string.IsNullOrWhiteSpace(txtUser.Text)
-                || string.IsNullOrWhiteSpace(txtPassword.Text)) {
-                MessageBox.Show("数据库连接信息不完整");
-                return;
-            }
-
-            helper.DbAddress = txtDataBaseAddress.Text.Trim();
-            helper.Database = txtDatabase.Text.Trim();
-            helper.User = txtUser.Text.Trim();
-            helper.Password = txtPassword.Text.Trim();
             SelectTable dlg = new SelectTable(helper);
             if (dlg.ShowDialog() == DialogResult.OK) {
                 string tableName = dlg.TableName;
@@ -39,39 +27,30 @@ namespace FieldCompareMerge
                 dataGridViewTarget.DataSource = helper.LoadTableData(tableName);
                 DataTable colTable= helper.LoadColumns(tableName);
                 DataTable tempCol = colTable.DefaultView.ToTable(true, "COLUMN_NAME");
-                combSelectedField.DataSource = tempCol;
-                combSelectedField.DisplayMember = "COLUMN_NAME";
-
-                combKeyField.DataSource = tempCol.Copy();
+                combKeyField.DataSource = tempCol;
                 combKeyField.DisplayMember = "COLUMN_NAME";
             }
         }
 
-        private void btnGuid_Click(object sender, EventArgs e) {
-            this.txtGuid.Text = Guid.NewGuid().ToString();
-        }
-
         private void btnInputTable_Click(object sender, EventArgs e) {
-            if (string.IsNullOrWhiteSpace(txtXmlPath.Text)) {
-                MessageBox.Show("先选择xml文件路径");
-                return;
-            }
-            string xml = File.ReadAllText(txtXmlPath.Text);
-            DataSet ds = ConvertXMLToDataSet(xml);
-            if(ds==null || ds.Tables.Count<=0) {
-                MessageBox.Show("xml文件中无数据或数据不合法");
-                return;
-            }
-            dataGridViewSource.DataSource = ds.Tables[0];
-            lblSourceTableName.Text = ds.Tables[0].TableName;
+            SelectXMLFileInput();
         }
 
-        private void btnSelectFile_Click(object sender, EventArgs e) {
+        private void SelectXMLFileInput() {
             OpenFileDialog dlg = new OpenFileDialog();
             dlg.Multiselect = false;
             dlg.Filter = "xml|*.xml";
-            if(dlg.ShowDialog()== DialogResult.OK) {
+            if (dlg.ShowDialog() == DialogResult.OK) {
                 this.txtXmlPath.Text = dlg.FileName;
+
+                string xml = File.ReadAllText(txtXmlPath.Text);
+                DataSet ds = ConvertXMLToDataSet(xml);
+                if (ds == null || ds.Tables.Count <= 0) {
+                    MessageBox.Show("xml文件中无数据或数据不合法");
+                    return;
+                }
+                dataGridViewSource.DataSource = ds.Tables[0];
+                lblSourceTableName.Text = ds.Tables[0].TableName;
             }
         }
 
@@ -176,6 +155,7 @@ namespace FieldCompareMerge
         private void MergeFieldValue() {
             if (string.IsNullOrWhiteSpace(combSelectedField.Text)
                 ||string.IsNullOrWhiteSpace(combKeyField.Text)) {
+                MessageBox.Show("关键字字段或更新字段必须选择");
                 return;
             }
             if (string.Equals(combKeyField.Text, combSelectedField.Text)) {
@@ -187,6 +167,21 @@ namespace FieldCompareMerge
 
             DataTable sourceDT = this.dataGridViewSource.DataSource as DataTable;
             DataTable targetDT = this.dataGridViewTarget.DataSource as DataTable;
+            if (sourceDT == null || targetDT == null) {
+                return;
+            }
+            DataGridViewColumn col = new DataGridViewColumn();
+            col.Name = "";
+            DataTable combineDT = new DataTable("combine");
+            string tKeyName = string.Format("A_{0}", keyName);//目标
+            string sKeyName = string.Format("B_{0}", keyName);//源
+            combineDT.Columns.Add(tKeyName);
+            combineDT.Columns.Add(sKeyName);
+            dataGridViewTemp.Columns.AddRange(
+                new DataGridViewTextBoxColumn() { Name = tKeyName,},
+                new DataGridViewTextBoxColumn() { Name = sKeyName,},
+                new DataGridViewTextBoxColumn() { Name = filedName, }
+                );
             foreach (DataRow row in targetDT.Rows) {
                 if (row[keyName] == DBNull.Value) {
                     continue;
@@ -195,7 +190,16 @@ namespace FieldCompareMerge
                 if (tempRow == null) {
                     continue;
                 }
-                row[filedName] = tempRow[filedName];
+                int index = dataGridViewTemp.Rows.Add();
+                DataGridViewRow dgvRow = dataGridViewTemp.Rows[index];             
+                bool btrue=dgvRow.SetValues(row[keyName], tempRow[keyName], tempRow[filedName]);
+                dgvRow.DefaultCellStyle.BackColor = Color.Red;
+                //dataGridViewTemp.Rows.Add(dgvRow);
+                //row[filedName] = tempRow[filedName];
+                DataGridViewRow dgvTRow= dataGridViewTarget.Rows.Cast<DataGridViewRow>().FirstOrDefault(p => Equals(p.Cells[keyName].Value, row[keyName]));
+                (dgvTRow.DataBoundItem as DataRowView).Row.Delete();
+                DataGridViewRow dgvSRow = dataGridViewSource.Rows.Cast<DataGridViewRow>().FirstOrDefault(p => Equals(p.Cells[keyName].Value, tempRow[keyName]));
+                (dgvSRow.DataBoundItem as DataRowView).Row.Delete();
             }
             this.dataGridViewTarget.Refresh();
         }
@@ -204,6 +208,7 @@ namespace FieldCompareMerge
         /// </summary>
         private void MergeFieldSelected() {
             if (string.IsNullOrWhiteSpace(combSelectedField.Text)) {
+                MessageBox.Show("更新字段必须选择");
                 return;
             }
             string filedName = combSelectedField.Text;
@@ -211,12 +216,10 @@ namespace FieldCompareMerge
 
             if (dataGridViewSource.SelectedRows.Count > 0 && dataGridViewTarget.SelectedRows.Count > 0) {
                 object sourceValue = dataGridViewSource.SelectedRows[0].Cells[filedName].Value;
-                if (!chkUnique.Checked) {
-                    DataRow tempRow = targetDT.AsEnumerable().FirstOrDefault(p => p.Field<object>(filedName).ToString() == sourceValue.ToString());
-                    if (tempRow != null) {
-                        MessageBox.Show("选择重复，不允许操作");
-                        return;
-                    }
+                DataRow tempRow = targetDT.AsEnumerable().FirstOrDefault(p => p.Field<object>(filedName).ToString() == sourceValue.ToString());
+                if (tempRow != null) {
+                    MessageBox.Show("选择重复，不允许操作");
+                    return;
                 }
                 dataGridViewTarget.SelectedRows[0].Cells[filedName].Value = sourceValue;
             }
@@ -234,14 +237,11 @@ namespace FieldCompareMerge
 
             if (dataGridViewTarget.SelectedRows.Count > 0) {
                 object sourceValue = dataGridViewTarget.SelectedRows[0].Cells[filedName].Value;
-                if (!chkUnique.Checked) {
-                    DataRow tempRow = sourceDT.AsEnumerable().FirstOrDefault(p => p.Field<string>(filedName) == sourceValue.ToString());
-                    if (tempRow != null) {
-                        MessageBox.Show("选择重复，不允许操作");
-                        return;
-                    }
+                DataRow tempRow = sourceDT.AsEnumerable().FirstOrDefault(p => p.Field<string>(filedName) == sourceValue.ToString());
+                if (tempRow != null) {
+                    MessageBox.Show("选择重复，不允许操作");
+                    return;
                 }
-
                 DataRow row = (dataGridViewTarget.SelectedRows[0].DataBoundItem as DataRowView).Row;
                 sourceDT.Rows.Add(row.ItemArray);
             }
@@ -253,6 +253,7 @@ namespace FieldCompareMerge
         private bool SaveChangedTableToDB() {
             if (string.IsNullOrWhiteSpace(combSelectedField.Text)
                 || string.IsNullOrWhiteSpace(combKeyField.Text)) {
+                MessageBox.Show("关键字字段或更新字段必须选择");
                 return false;
             }
             if (string.Equals(combKeyField.Text, combSelectedField.Text)) {
@@ -264,6 +265,50 @@ namespace FieldCompareMerge
             string tableName = lblTargetTableName.Text;
             DataTable targetDT = this.dataGridViewTarget.DataSource as DataTable;
             return helper.SaveTableToDB(targetDT, tableName, keyName, filedName);
+        }
+
+        private void btnOpenDB_Click(object sender, EventArgs e) {
+            if (OpenDatabase()) {
+                btnCloseDB.Enabled = true;
+                btnOpenDB.Enabled = false;
+                panelDB.Enabled = false;
+
+                btnSelectTable.Enabled = true;
+                this.combSelectedField.SelectedIndex = 0;
+            } else {
+                btnOpenDB.Enabled = true;
+                panelDB.Enabled = true;
+
+                btnSelectTable.Enabled = false;
+            }
+        }
+
+        private bool OpenDatabase() {
+            if (string.IsNullOrWhiteSpace(txtDataBaseAddress.Text)
+                || string.IsNullOrWhiteSpace(txtDatabase.Text)
+                || string.IsNullOrWhiteSpace(txtUser.Text)
+                || string.IsNullOrWhiteSpace(txtPassword.Text)) {
+                MessageBox.Show("数据库连接信息不完整");
+                return false;
+            }
+
+            helper.DbAddress = txtDataBaseAddress.Text.Trim();
+            helper.Database = txtDatabase.Text.Trim();
+            helper.User = txtUser.Text.Trim();
+            helper.Password = txtPassword.Text.Trim();
+            if (!helper.OpenConn()) {
+                MessageBox.Show("打开数据库失败，请检查连接信息");
+                return false;
+            }
+            return true;
+        }
+
+        private void btnCloseDB_Click(object sender, EventArgs e) {
+            panelDB.Enabled = true;
+            btnOpenDB.Enabled = true;
+            btnCloseDB.Enabled = false;
+
+            btnSelectTable.Enabled = false;
         }
     }
 }
