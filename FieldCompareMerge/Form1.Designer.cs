@@ -55,10 +55,10 @@
             this.lblTargetTableName = new System.Windows.Forms.Label();
             this.lblSourceTableName = new System.Windows.Forms.Label();
             this.panelDB = new System.Windows.Forms.Panel();
+            this.txtStationName = new System.Windows.Forms.TextBox();
+            this.lblName = new System.Windows.Forms.Label();
             this.btnOpenDB = new System.Windows.Forms.Button();
             this.btnCloseDB = new System.Windows.Forms.Button();
-            this.lblName = new System.Windows.Forms.Label();
-            this.txtStationName = new System.Windows.Forms.TextBox();
             this.dataGridViewTemp = new System.Windows.Forms.DataGridView();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.subMenuItemDel = new System.Windows.Forms.ToolStripMenuItem();
@@ -111,6 +111,7 @@
             this.txtDataBaseAddress.Name = "txtDataBaseAddress";
             this.txtDataBaseAddress.Size = new System.Drawing.Size(229, 21);
             this.txtDataBaseAddress.TabIndex = 4;
+            this.txtDataBaseAddress.Text = "106.3.45.209";
             // 
             // txtDatabase
             // 
@@ -118,6 +119,7 @@
             this.txtDatabase.Name = "txtDatabase";
             this.txtDatabase.Size = new System.Drawing.Size(229, 21);
             this.txtDatabase.TabIndex = 4;
+            this.txtDatabase.Text = "CCUP巴关河";
             // 
             // txtUser
             // 
@@ -133,6 +135,7 @@
             this.txtPassword.Name = "txtPassword";
             this.txtPassword.Size = new System.Drawing.Size(100, 21);
             this.txtPassword.TabIndex = 4;
+            this.txtPassword.Text = "zz863$senlun";
             // 
             // btnSelectTable
             // 
@@ -354,6 +357,22 @@
             this.panelDB.Size = new System.Drawing.Size(323, 103);
             this.panelDB.TabIndex = 28;
             // 
+            // txtStationName
+            // 
+            this.txtStationName.Location = new System.Drawing.Point(86, 80);
+            this.txtStationName.Name = "txtStationName";
+            this.txtStationName.Size = new System.Drawing.Size(229, 21);
+            this.txtStationName.TabIndex = 6;
+            // 
+            // lblName
+            // 
+            this.lblName.AutoSize = true;
+            this.lblName.Location = new System.Drawing.Point(3, 83);
+            this.lblName.Name = "lblName";
+            this.lblName.Size = new System.Drawing.Size(77, 12);
+            this.lblName.TabIndex = 5;
+            this.lblName.Text = "搅拌站名称：";
+            // 
             // btnOpenDB
             // 
             this.btnOpenDB.Location = new System.Drawing.Point(164, 118);
@@ -375,22 +394,6 @@
             this.btnCloseDB.UseVisualStyleBackColor = true;
             this.btnCloseDB.Click += new System.EventHandler(this.btnCloseDB_Click);
             // 
-            // lblName
-            // 
-            this.lblName.AutoSize = true;
-            this.lblName.Location = new System.Drawing.Point(3, 83);
-            this.lblName.Name = "lblName";
-            this.lblName.Size = new System.Drawing.Size(77, 12);
-            this.lblName.TabIndex = 5;
-            this.lblName.Text = "搅拌站名称：";
-            // 
-            // txtStationName
-            // 
-            this.txtStationName.Location = new System.Drawing.Point(86, 80);
-            this.txtStationName.Name = "txtStationName";
-            this.txtStationName.Size = new System.Drawing.Size(229, 21);
-            this.txtStationName.TabIndex = 6;
-            // 
             // dataGridViewTemp
             // 
             this.dataGridViewTemp.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
@@ -408,13 +411,14 @@
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.subMenuItemDel});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(101, 26);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(153, 48);
             // 
             // subMenuItemDel
             // 
             this.subMenuItemDel.Name = "subMenuItemDel";
             this.subMenuItemDel.Size = new System.Drawing.Size(152, 22);
             this.subMenuItemDel.Text = "删除";
+            this.subMenuItemDel.Click += new System.EventHandler(this.subMenuItemDel_Click);
             // 
             // MainForm
             // 

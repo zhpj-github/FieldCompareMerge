@@ -14,6 +14,9 @@ namespace FieldCompareMerge
 {
     public partial class MainForm : Form
     {
+        private DataTable sourceData = null;//原始源表数据
+        private DataTable targetData = null;//原始目标表数据
+
         DbHelper helper = new DbHelper();
         public MainForm() {
             InitializeComponent();
@@ -24,8 +27,10 @@ namespace FieldCompareMerge
             if (dlg.ShowDialog() == DialogResult.OK) {
                 string tableName = dlg.TableName;
                 lblTargetTableName.Text = tableName;
-                dataGridViewTarget.DataSource = helper.LoadTableData(tableName);
-                DataTable colTable= helper.LoadColumns(tableName);
+                DataTable dataDT= helper.LoadTableData(tableName);
+                targetData = dataDT.Copy();
+                dataGridViewTarget.DataSource = dataDT;
+                DataTable colTable= helper.LoadColumns(tableName);                
                 DataTable tempCol = colTable.DefaultView.ToTable(true, "COLUMN_NAME");
                 combKeyField.DataSource = tempCol;
                 combKeyField.DisplayMember = "COLUMN_NAME";
@@ -49,6 +54,7 @@ namespace FieldCompareMerge
                     MessageBox.Show("xml文件中无数据或数据不合法");
                     return;
                 }
+                sourceData = ds.Tables[0].Copy();
                 dataGridViewSource.DataSource = ds.Tables[0];
                 lblSourceTableName.Text = ds.Tables[0].TableName;
             }
@@ -164,44 +170,67 @@ namespace FieldCompareMerge
             }
             string keyName = combKeyField.Text;
             string filedName = combSelectedField.Text;
-
-            DataTable sourceDT = this.dataGridViewSource.DataSource as DataTable;
-            DataTable targetDT = this.dataGridViewTarget.DataSource as DataTable;
-            if (sourceDT == null || targetDT == null) {
+            string msg = string.Format("确定使用关键字段【{0}】进行合并吗?", keyName);
+            if (MessageBox.Show(msg, "请确认", MessageBoxButtons.OKCancel) != DialogResult.OK) {
                 return;
             }
+            DataTable source = this.dataGridViewSource.DataSource as DataTable;
+            DataTable target = this.dataGridViewTarget.DataSource as DataTable;
+            if (source == null || target == null) {
+                return;
+            }
+            DataTable sourceDT = source.Copy();
+            DataTable targetDT = target.Copy();
             DataGridViewColumn col = new DataGridViewColumn();
             col.Name = "";
             DataTable combineDT = new DataTable("combine");
-            string tKeyName = string.Format("A_{0}", keyName);//目标
-            string sKeyName = string.Format("B_{0}", keyName);//源
+            string tKeyName = string.Format("T_{0}", keyName);//目标
+            string sKeyName = string.Format("S_{0}", keyName);//源
             combineDT.Columns.Add(tKeyName);
             combineDT.Columns.Add(sKeyName);
-            dataGridViewTemp.Columns.AddRange(
-                new DataGridViewTextBoxColumn() { Name = tKeyName,},
-                new DataGridViewTextBoxColumn() { Name = sKeyName,},
-                new DataGridViewTextBoxColumn() { Name = filedName, }
-                );
+            combineDT.Columns.Add(filedName);
+            combineDT.Columns.Add("EQUAL", typeof(bool));
+            dataGridViewTemp.DataSource = combineDT;
             foreach (DataRow row in targetDT.Rows) {
                 if (row[keyName] == DBNull.Value) {
                     continue;
                 }
-                DataRow tempRow= sourceDT.AsEnumerable().FirstOrDefault(p => p.Field<string>(keyName) == row[keyName].ToString());
+                DataRow tempRow= sourceDT.AsEnumerable().FirstOrDefault(p => p.Field<object>(keyName).ToString() == row[keyName].ToString());
                 if (tempRow == null) {
                     continue;
                 }
-                int index = dataGridViewTemp.Rows.Add();
-                DataGridViewRow dgvRow = dataGridViewTemp.Rows[index];             
-                bool btrue=dgvRow.SetValues(row[keyName], tempRow[keyName], tempRow[filedName]);
-                dgvRow.DefaultCellStyle.BackColor = Color.Red;
-                //dataGridViewTemp.Rows.Add(dgvRow);
-                //row[filedName] = tempRow[filedName];
+                bool isEqual = false;
+                if (row[filedName] != DBNull.Value && tempRow[filedName] != DBNull.Value) {
+                    if (string.Equals(row[filedName].ToString(), tempRow[filedName].ToString(),StringComparison.OrdinalIgnoreCase)) {
+                        isEqual=true;
+                    }
+                }
+
+                DataRow combineRow = combineDT.NewRow();
+                combineRow[tKeyName] = row[keyName];
+                combineRow[sKeyName] = tempRow[keyName];
+                combineRow[filedName] = tempRow[filedName];
+                combineRow["EQUAL"] = isEqual;
+                combineDT.Rows.Add(combineRow);
+
                 DataGridViewRow dgvTRow= dataGridViewTarget.Rows.Cast<DataGridViewRow>().FirstOrDefault(p => Equals(p.Cells[keyName].Value, row[keyName]));
                 (dgvTRow.DataBoundItem as DataRowView).Row.Delete();
                 DataGridViewRow dgvSRow = dataGridViewSource.Rows.Cast<DataGridViewRow>().FirstOrDefault(p => Equals(p.Cells[keyName].Value, tempRow[keyName]));
                 (dgvSRow.DataBoundItem as DataRowView).Row.Delete();
             }
-            this.dataGridViewTarget.Refresh();
+            foreach (DataGridViewRow dgvRow in dataGridViewTemp.Rows) {
+                object objEqual = dgvRow.Cells["EQUAL"].Value;
+                if (objEqual is bool) {
+                    if ((bool)objEqual) {
+                        dgvRow.DefaultCellStyle.BackColor = Color.Gray;
+                    } else {
+                        dgvRow.DefaultCellStyle.BackColor = Color.Red;
+                    }
+                }
+            }
+            source.AcceptChanges();
+            target.AcceptChanges();
+            this.dataGridViewTemp.Refresh();
         }
         /// <summary>
         /// 合并选择字段
@@ -309,6 +338,56 @@ namespace FieldCompareMerge
             btnCloseDB.Enabled = false;
 
             btnSelectTable.Enabled = false;
+        }
+
+        private void subMenuItemDel_Click(object sender, EventArgs e) {
+            if (dataGridViewTemp.SelectedRows.Count <= 0) {
+                return;
+            }
+            RemoveCombinedItems();
+        }
+        /// <summary>
+        /// 移除已合并的项
+        /// </summary>
+        private void RemoveCombinedItems() {
+            string keyName = this.combKeyField.Text;
+            string tKeyName = string.Format("T_{0}", keyName);//目标
+            string sKeyName = string.Format("S_{0}", keyName);//源
+
+            DataTable temp = dataGridViewTemp.DataSource as DataTable;
+            DataTable targetDt = dataGridViewTarget.DataSource as DataTable;
+            DataTable sourceDt = dataGridViewSource.DataSource as DataTable;
+            bool isShow = false;
+            foreach (DataGridViewRow row in dataGridViewTemp.SelectedRows) {
+                bool isCan = true;
+                if (row.Cells["EQUAL"].Value is bool) {
+                    if ((bool)row.Cells["EQUAL"].Value) {
+                        isCan = false;
+                    }
+                } else {
+                    continue;
+                }
+                if (!isCan) {
+                    isShow = true;
+                    continue;
+                }
+                DataRow tempRow = (row.DataBoundItem as DataRowView).Row;
+                DataRow tRow = targetData.AsEnumerable().FirstOrDefault(p => p[keyName].ToString() == tempRow[tKeyName].ToString());
+                if (tRow != null) {
+                    targetDt.Rows.Add(tRow.ItemArray);
+                }
+                DataRow sRow = sourceData.AsEnumerable().FirstOrDefault(p => p[keyName].ToString() == tempRow[sKeyName].ToString());
+                if (tRow != null) {
+                    sourceDt.Rows.Add(sRow.ItemArray);
+                }
+                temp.Rows.Remove(tempRow);
+            }
+            if (isShow) {
+                MessageBox.Show("待合并字段相同的项合并后不允许删除");
+            }
+            this.dataGridViewTemp.Refresh();
+            this.dataGridViewSource.Refresh();
+            this.dataGridViewTarget.Refresh();
         }
     }
 }
