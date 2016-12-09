@@ -111,7 +111,6 @@
             this.txtDataBaseAddress.Name = "txtDataBaseAddress";
             this.txtDataBaseAddress.Size = new System.Drawing.Size(229, 21);
             this.txtDataBaseAddress.TabIndex = 4;
-            this.txtDataBaseAddress.Text = "106.3.45.209";
             // 
             // txtDatabase
             // 
@@ -119,7 +118,6 @@
             this.txtDatabase.Name = "txtDatabase";
             this.txtDatabase.Size = new System.Drawing.Size(229, 21);
             this.txtDatabase.TabIndex = 4;
-            this.txtDatabase.Text = "CCUP巴关河";
             // 
             // txtUser
             // 
@@ -411,12 +409,12 @@
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.subMenuItemDel});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(153, 48);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(101, 26);
             // 
             // subMenuItemDel
             // 
             this.subMenuItemDel.Name = "subMenuItemDel";
-            this.subMenuItemDel.Size = new System.Drawing.Size(152, 22);
+            this.subMenuItemDel.Size = new System.Drawing.Size(100, 22);
             this.subMenuItemDel.Text = "删除";
             this.subMenuItemDel.Click += new System.EventHandler(this.subMenuItemDel_Click);
             // 
